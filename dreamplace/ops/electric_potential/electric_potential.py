@@ -80,6 +80,7 @@ class ElectricPotentialFunction(Function):
         num_threads=8
     ):
 
+        tt = time.time()
         if pos.is_cuda:
             output = electric_potential_cuda.density_map(
                 pos.view(pos.numel()),
@@ -231,11 +232,14 @@ class ElectricPotentialFunction(Function):
         #    plot(plot_count, ctx.field_map_y.clone().cpu().numpy(), padding, "summary/%d.field_map_y" % (plot_count))
         #plot_count += 1
 
+        if pos.is_cuda:
+            torch.cuda.synchronize()
+        print("\t\tdensity forward %.3f ms" % ((time.time()-tt)*1000))
         return energy
 
     @staticmethod
     def backward(ctx, grad_pos):
-        #tt = time.time()
+        tt = time.time()
         if grad_pos.is_cuda:
             output = -electric_potential_cuda.electric_force(
                 grad_pos,
@@ -288,9 +292,9 @@ class ElectricPotentialFunction(Function):
         #pgrad = np.concatenate([np.array(pgradx), np.array(pgrady)])
 
         #output = torch.empty_like(ctx.pos).uniform_(0.0, 0.1)
-        #if grad_pos.is_cuda:
-        #    torch.cuda.synchronize()
-        #print("\t\tdensity backward %.3f ms" % ((time.time()-tt)*1000))
+        if grad_pos.is_cuda:
+            torch.cuda.synchronize()
+        print("\t\tdensity backward %.3f ms" % ((time.time()-tt)*1000))
         return output, \
             None, None, None, None, \
             None, None, None, None, \
